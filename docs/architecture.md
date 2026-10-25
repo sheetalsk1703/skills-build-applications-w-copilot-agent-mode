@@ -28,22 +28,20 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 ## Implementation decisions
 
-Record your plan here before editing code.
-
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- Presentation tier decision: Keep React components focused on route rendering and visible states, with `src/api/client.ts` responsible for API URL construction and fetch behavior. Use React Router for the four capability views and accessible loading, empty, success, and error text.
+- Logic tier decision: Keep `/api/*` route wiring in the Express router and validation, aggregation, and recommendation behavior in explicit service functions. Return deliberate `4xx` responses for client or reference errors, rather than allowing Mongoose cast or missing-data failures to become `500` responses.
+- Data tier decision: Define required Mongoose schema fields for users, teams, activities, and workouts. Store stable demo records with upserts, preserving unrelated user data and updating an existing demo user's previous team membership when its team changes.
+- Activity tracking approach: Validate activity input and object IDs before querying, verify that the referenced user and team exist, then create an activity with computed points and an `occurredAt` timestamp. `GET` lists persisted activities through the service layer.
+- Team management approach: Reject teams without names in service validation and rely on Mongoose validation for required mascot and member data. Create teams with submitted names, mascots, and member IDs, and expose the resulting records through list and create routes.
+- Leaderboard approach: Aggregate activities by team and sum each team's points. Sort descending, assign a 1-based rank, and return only `teamName`, `totalPoints`, and `rank` through the leaderboard service.
+- Workout suggestions approach: Resolve the URL-decoded user email to a seeded user and inspect the user's recent activity and fitness goal. Return matching workouts first with a reason tied to activity or goal, and return a deliberate `404` for an unknown user.
 
 ## Test plan
 
-Record the commands you run and what each failure means.
+Run the narrow contracts in dependency order: data first, API second, then presentation. A data failure means the schemas or seed are incomplete; an API failure means route/service behavior is not satisfying the contracts; a frontend failure means rendering, shared API usage, or accessible states need correction. Build commands verify TypeScript and Vite integration after contract behavior passes.
 
-- Data-tier command: `npm run test:data --prefix octofit-tracker/backend`
-- API command: `npm run test:api --prefix octofit-tracker/backend`
-- Frontend command: `npm test --prefix octofit-tracker/frontend`
-- Backend build command: `npm run build --prefix octofit-tracker/backend`
-- Frontend build command: `npm run build --prefix octofit-tracker/frontend`
+- Data-tier command: `npm run test:data --prefix octofit-tracker/backend` - validates Mongoose fields and idempotent demo seeding. Failure indicates missing required schema validation or seed relationships.
+- API command: `npm run test:api --prefix octofit-tracker/backend` - validates activity, team, leaderboard, and workout API contracts. Failure indicates missing service behavior, invalid input handling, aggregation, or recommendations.
+- Frontend command: `npm test --prefix octofit-tracker/frontend` - validates routed presentation, shared API usage, data rendering, and loading/empty/error states. Failure indicates incomplete components or incorrect user-visible behavior.
+- Backend build command: `npm run build --prefix octofit-tracker/backend` - compiles the Express and Mongoose TypeScript implementation. Failure indicates a type or build integration problem.
+- Frontend build command: `npm run build --prefix octofit-tracker/frontend` - compiles the React/Vite application. Failure indicates a component, route, import, or Vite configuration problem.
